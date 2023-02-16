@@ -118,17 +118,16 @@ namespace Promise {
 
         public:
             Group(std::vector<std::shared_ptr<Stream>> const& streams) :
-                _needsToStart(true),
                 _streams(streams),
-                _subscriber(std::make_shared<CompositeSubscriber>(streams.size())) {}
+                _subscriber(nullptr) {}
 
             virtual std::shared_ptr<Cancellable> const await(std::shared_ptr<Completion> const& completion) override {
                 return listen(std::make_shared<Stream::SubscriberFromCompletion>(completion));
             }
 
             virtual std::shared_ptr<Cancellable> const listen(std::shared_ptr<Subscriber> const& subscriber) override {
-                if (_needsToStart) {
-                    _needsToStart = false;
+                if (_subscriber == nullptr) {
+                    _subscriber = std::make_shared<CompositeSubscriber>(_streams.size());
                     auto const cancellable = std::make_shared<CompositeCancellable>();
                     for (auto const& stream : _streams) {
                         cancellable->add(stream->listen(_subscriber));
@@ -140,9 +139,8 @@ namespace Promise {
             }
 
         private:
-            bool _needsToStart;
             std::vector<std::shared_ptr<Stream>> const _streams;
-            std::shared_ptr<CompositeSubscriber> const _subscriber;
+            std::shared_ptr<CompositeSubscriber> _subscriber;
 
         };
     }
