@@ -41,6 +41,26 @@ namespace Promise {
             virtual void received(std::shared_ptr<Event> const& event) = 0;
         };
 
+        class SubscriberFromCompletion : public Stream::Subscriber {
+        public:
+            SubscriberFromCompletion(std::shared_ptr<Future::Completion> const& completion) :
+                _completion(completion) {}
+
+            virtual void completed() override {
+                _completion->completed();
+            }
+
+            virtual void failed(std::shared_ptr<Future::Error> const& error) override {
+                _completion->failed(error);
+            }
+
+            virtual void received(std::shared_ptr<Stream::Event> const& event) override {
+            }
+
+        private:
+            std::shared_ptr<Future::Completion> const _completion;
+        };
+
     public:
         virtual ~Stream() {}
 
