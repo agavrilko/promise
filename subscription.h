@@ -13,20 +13,20 @@ namespace Promise {
                     _map() {}
 
                 virtual void completed() override {
-                    for (auto const& [key, sub] : _map) {
-                        sub->completed();
+                    for (auto const& i : _map) {
+                        i.second->completed();
                     }
                 }
 
                 virtual void failed(std::shared_ptr<Future::Error> const& error) override {
-                    for (auto const& [key, sub] : _map) {
-                        sub->failed(error);
+                    for (auto const& i : _map) {
+                        i.second->failed(error);
                     }
                 }
 
                 virtual void received(std::shared_ptr<Stream::Event> const& event) override {
-                    for (auto const& [key, sub] : _map) {
-                        sub->received(event);
+                    for (auto const& i : _map) {
+                        i.second->received(event);
                     }
                 }
 
@@ -37,8 +37,9 @@ namespace Promise {
                 }
 
                 virtual void remove(int const key) {
-                    if (_map.contains(key)) {
-                        _map.erase(key);
+                    auto const& i = _map.find(key);
+                    if (i != _map.end()) {
+                        _map.erase(i);
                     }
                 }
 
