@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <memory>
 #include "stream.h"
 #include "subscription.h"
 
@@ -8,7 +9,7 @@ namespace Promise {
     namespace Concrete {
         class Subject : public Stream {
         protected:
-            enum State {
+            enum class State {
                 active,
                 completed,
                 failed,

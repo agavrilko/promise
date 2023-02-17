@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include "subject.h"
 
 namespace Promise {

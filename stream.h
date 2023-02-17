@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 namespace Promise {
     class Cancellable {
     public:
