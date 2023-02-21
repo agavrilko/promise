@@ -13,19 +13,22 @@ namespace Promise {
                     _map() {}
 
                 virtual void completed() override {
-                    for (auto const& i : _map) {
+                    auto const map(_map);
+                    for (auto const& i : map) {
                         i.second->completed();
                     }
                 }
 
                 virtual void failed(std::shared_ptr<Future::Error> const& error) override {
-                    for (auto const& i : _map) {
+                    auto const map(_map);
+                    for (auto const& i : map) {
                         i.second->failed(error);
                     }
                 }
 
                 virtual void received(std::shared_ptr<Stream::Event> const& event) override {
-                    for (auto const& i : _map) {
+                    auto const map(_map);
+                    for (auto const& i : map) {
                         i.second->received(event);
                     }
                 }

@@ -15,19 +15,22 @@ namespace Promise {
                 _onReceive() {}
 
             virtual void completed() {
-                for (auto const& handler : _onComplete) {
+                auto const handlers(_onComplete);
+                for (auto const& handler : handlers) {
                     handler();
                 }
             }
 
             virtual void failed(std::shared_ptr<Future::Error> const& error) {
-                for (auto const& handler : _onFail) {
+                auto const handlers(_onFail);
+                for (auto const& handler : handlers) {
                     handler(error);
                 }
             }
 
             virtual void received(std::shared_ptr<Stream::Event> const& event) {
-                for (auto const& handler : _onReceive) {
+                auto const handlers(_onReceive);
+                for (auto const& handler : handlers) {
                     handler(event);
                 }
             }
@@ -39,7 +42,7 @@ namespace Promise {
             template <typename E>
             void onFail(std::function<void(std::shared_ptr<E> const&)> const& handler) {
                 _onFail.push_back([handler](std::shared_ptr<Future::Error> const& e) {
-                    auto const& error = std::static_pointer_cast<E>(e);
+                    auto const& error = std::dynamic_pointer_cast<E>(e);
                     if (error != nullptr) {
                         handler(error);
                     }
@@ -49,7 +52,7 @@ namespace Promise {
             template <typename T>
             void onReceive(std::function<void(std::shared_ptr<T> const&)> const& handler) {
                 _onReceive.push_back([handler](std::shared_ptr<Stream::Event> const& e) {
-                    auto const& event = std::static_pointer_cast<T>(e);
+                    auto const& event = std::dynamic_pointer_cast<T>(e);
                     if (event != nullptr) {
                         handler(event);
                     }
