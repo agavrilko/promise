@@ -7,9 +7,9 @@ namespace Promise {
     namespace Concrete {
         class Empty : public Stream {
         private:
-            class EmptyWaiter : public Cancellable {
+            class Waiter : public Cancellable {
             public:
-                EmptyWaiter() {}
+                Waiter() {}
 
                 void cancel() override {}
             };
@@ -17,13 +17,8 @@ namespace Promise {
         public:
             Empty() {}
 
-            std::shared_ptr<Cancellable> const await(std::shared_ptr<Completion> const& completion) override {
-                completion->completed();
-                return std::make_shared<EmptyWaiter>();
-            }
-
             std::shared_ptr<Cancellable> const listen(std::shared_ptr<Subscriber> const& subscriber) override {
-                return await(subscriber);
+                return std::make_shared<Waiter>();
             }
         };
     }
