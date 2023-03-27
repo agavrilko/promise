@@ -1,7 +1,7 @@
 #pragma once
 
 #include <memory>
-#include "stream.h"
+#include "../stream.h"
 
 namespace Promise {
     namespace Concrete {

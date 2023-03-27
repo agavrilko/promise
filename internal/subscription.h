@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include "../stream.h"
 
 namespace Promise {
     namespace Internal {

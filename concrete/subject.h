@@ -2,8 +2,8 @@
 
 #include <map>
 #include <memory>
-#include "stream.h"
-#include "subscription.h"
+#include "../internal/subscription.h"
+#include "../stream.h"
 
 namespace Promise {
     namespace Concrete {

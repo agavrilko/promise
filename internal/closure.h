@@ -3,10 +3,10 @@
 #include <functional>
 #include <memory>
 #include <vector>
-#include "stream.h"
+#include "../stream.h"
 
 namespace Promise {
-    namespace Concrete {
+    namespace Internal {
         class Closure : public Stream::Subscriber {
         public:
             Closure() :
