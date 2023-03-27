@@ -1,8 +1,7 @@
 #pragma once
 
-#include "closure.h"
-#include "current_value_subject.h"
-#include "empty.h"
-#include "group.h"
+#include "concrete/current_value_subject.h"
+#include "concrete/empty.h"
+#include "concrete/subject.h"
+#include "pipeline/listen.h"
 #include "stream.h"
-#include "subject.h"
