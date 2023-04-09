@@ -18,7 +18,9 @@ namespace Promise {
         public:
             Subject() :
                 _state(State::active),
+                _shouldSendEvent(false),
                 _bag(std::make_shared<Internal::Subscription::Bag>()),
+                _lastEvent(nullptr),
                 _failure(nullptr) {}
 
             virtual std::shared_ptr<Cancellable> const await(std::shared_ptr<Completion> const& completion) override {
@@ -28,6 +30,9 @@ namespace Promise {
             virtual std::shared_ptr<Cancellable> const listen(std::shared_ptr<Subscriber> const& subscriber) override {
                 switch (_state) {
                     case State::active:
+                        if (_shouldSendEvent) {
+                            subscriber->received(_lastEvent);
+                        }
                         return std::make_shared<Internal::Subscription>(
                             _bag->add(subscriber),
                             _bag
@@ -44,7 +49,11 @@ namespace Promise {
                 return std::make_shared<Internal::Subscription::Empty>();
             }
 
-            virtual void complete() {
+            std::shared_ptr<Event> const lastEvent() const {
+                return _lastEvent;
+            }
+
+            void complete() {
                 switch (_state) {
                     case State::active: {
                         _state = State::completed;
@@ -58,7 +67,7 @@ namespace Promise {
                 }
             }
 
-            virtual void fail(std::shared_ptr<Error> const& error) {
+            void fail(std::shared_ptr<Error> const& error) {
                 switch (_state) {
                     case State::active:
                         _state = State::failed;
@@ -72,9 +81,11 @@ namespace Promise {
                 }
             }
 
-            virtual void receive(std::shared_ptr<Event> const& event) {
+            void receive(std::shared_ptr<Event> const& event) {
                 switch (_state) {
                     case State::active:
+                        _shouldSendEvent = true;
+                        _lastEvent = event;
                         _bag->received(event);
                         break;
 
@@ -83,11 +94,11 @@ namespace Promise {
                 }
             }
 
-        protected:
-            State _state;
-
         private:
+            State _state;
+            bool _shouldSendEvent;
             std::shared_ptr<Internal::Subscription::Bag> const _bag;
+            std::shared_ptr<Event> _lastEvent;
             std::shared_ptr<Error> _failure;
 
         };

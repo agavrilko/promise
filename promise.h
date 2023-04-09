@@ -1,7 +1,15 @@
 #pragma once
 
-#include "concrete/current_value_subject.h"
-#include "concrete/empty.h"
+#include "concrete/generic.h"
+#include "concrete/map.h"
+#include "concrete/sequence.h"
 #include "concrete/subject.h"
+#include "pipeline/after.h"
+#include "pipeline/just.h"
+#include "pipeline/link.h"
 #include "pipeline/listen.h"
+#include "pipeline/map.h"
+#include "pipeline/run.h"
+#include "pipeline/start_with.h"
+#include "pipeline/switch.h"
 #include "stream.h"
