@@ -1,105 +1,80 @@
 #pragma once
 
-#include <map>
 #include <memory>
-#include "../internal/subscription.h"
-#include "../stream.h"
+#include "../internal/bag.h"
+#include "../publisher.h"
 
 namespace Promise {
     namespace Concrete {
-        class Subject : public Stream {
-        protected:
-            enum class State {
-                active,
-                completed,
-                failed,
+        class Subject : public Publisher {
+        private:
+            class Impl : public Internal::Bag {
+            private:
+                enum class State {
+                    empty,
+                    active,
+                    done,
+                };
+
+            public:
+                Impl() :
+                _currentValue(nullptr),
+                _state(State::active) {}
+
+                void sink(std::shared_ptr<Event> const& event) override {
+                    switch (_state) {
+                        case State::empty:
+                        case State::active:
+                            _currentValue = event;
+                            _state = _stateFromEvent(event);
+                            Bag::sink(event);
+                            break;
+
+                        case State::done:
+                            break;
+                    }
+                }
+
+                void add(std::shared_ptr<Subscriber> const& subscriber) override {
+                    switch (_state) {
+                        case State::empty:
+                            Bag::add(subscriber);
+                            break;
+
+                        case State::active:
+                            Bag::add(subscriber);
+                            subscriber->sink(_currentValue);
+                            break;
+
+                        case State::done:
+                            break;
+                    }
+                }
+
+            private:
+                std::shared_ptr<Event> _currentValue;
+                State _state;
+
+                State _stateFromEvent(std::shared_ptr<Event> const& event) {
+                    return std::dynamic_pointer_cast<Done>(event) ? State::done : State::active;
+                }
             };
 
         public:
             Subject() :
-                _state(State::active),
-                _shouldSendEvent(false),
-                _bag(std::make_shared<Internal::Subscription::Bag>()),
-                _lastEvent(nullptr),
-                _failure(nullptr) {}
+            _impl(std::make_shared<Impl>()) {}
 
-            virtual std::shared_ptr<Cancellable> const await(std::shared_ptr<Completion> const& completion) override {
-                return listen(std::make_shared<Stream::SubscriberFromCompletion>(completion));
+            std::shared_ptr<Cancellable> const listen(std::shared_ptr<Subscriber> const& subscriber) override {
+                _impl->add(subscriber);
+                return std::make_shared<Internal::Subscription>(_impl, subscriber);
             }
 
-            virtual std::shared_ptr<Cancellable> const listen(std::shared_ptr<Subscriber> const& subscriber) override {
-                switch (_state) {
-                    case State::active:
-                        if (_shouldSendEvent) {
-                            subscriber->received(_lastEvent);
-                        }
-                        return std::make_shared<Internal::Subscription>(
-                            _bag->add(subscriber),
-                            _bag
-                        );
-
-                    case State::completed:
-                        subscriber->completed();
-                        break;
-
-                    case State::failed:
-                        subscriber->failed(_failure);
-                        break;
-                }
-                return std::make_shared<Internal::Subscription::Empty>();
-            }
-
-            std::shared_ptr<Event> const lastEvent() const {
-                return _lastEvent;
-            }
-
-            void complete() {
-                switch (_state) {
-                    case State::active: {
-                        _state = State::completed;
-                        _bag->completed();
-                        _bag->clear();
-                        break;
-                    }
-
-                    default:
-                        break;
-                }
-            }
-
-            void fail(std::shared_ptr<Error> const& error) {
-                switch (_state) {
-                    case State::active:
-                        _state = State::failed;
-                        _failure = error;
-                        _bag->failed(error);
-                        _bag->clear();
-                        break;
-
-                    default:
-                        break;
-                }
-            }
-
-            void receive(std::shared_ptr<Event> const& event) {
-                switch (_state) {
-                    case State::active:
-                        _shouldSendEvent = true;
-                        _lastEvent = event;
-                        _bag->received(event);
-                        break;
-
-                    default:
-                        break;
-                }
+            void sink(std::shared_ptr<Event> const& event) {
+                _impl->sink(event);
             }
 
         private:
-            State _state;
-            bool _shouldSendEvent;
-            std::shared_ptr<Internal::Subscription::Bag> const _bag;
-            std::shared_ptr<Event> _lastEvent;
-            std::shared_ptr<Error> _failure;
+            std::shared_ptr<Impl> const _impl;
 
         };
     }
