@@ -1,31 +1,64 @@
 #pragma once
 
+#include <functional>
+#include <memory>
+#include <vector>
 #include "../concrete/map.h"
-#include "../stream.h"
+#include "../publisher.h"
 #include "link.h"
 
 namespace Promise {
     namespace Pipeline {
         struct Map : public Link {
-            Map(std::shared_ptr<Concrete::Map> const& map) :
-                _map(map) {}
+        private:
+            class Impl : public Promise::Concrete::Map::Converter {
+            public:
+                typedef std::shared_ptr<Promise::Publisher::Event> EventPtr;
+                typedef std::function<EventPtr const(EventPtr const&)> EventMapper;
 
-            Map(std::shared_ptr<Stream> const& stream) :
-                Map(std::make_shared<Concrete::Map>(stream)) {}
+            public:
+                Impl() :
+                _mappers() {}
 
-            std::shared_ptr<Stream> const commit() override {
-                return _map;
+                std::shared_ptr<Promise::Publisher::Event> const map(std::shared_ptr<Promise::Publisher::Event> const& event) override {
+                    for (auto& mapper : _mappers) {
+                        auto const result = mapper(event);
+                        if (result) {
+                            return result;
+                        }
+                    }
+                    return event;
+                }
+
+                void add(EventMapper const& mapper) {
+                    _mappers.push_back(mapper);
+                }
+
+            private:
+                std::vector<EventMapper> _mappers;
+            };
+
+        public:
+            Map(std::shared_ptr<Publisher> const& publisher) :
+            _publisher(publisher),
+            _impl() {}
+
+            std::shared_ptr<Publisher> const commit() override {
+                return std::make_shared<Promise::Concrete::Map>(_publisher, _impl);
             }
 
-            template <typename E>
-            Map onReceive(std::function<void(std::shared_ptr<E> const&, std::function<void(std::shared_ptr<Stream::Event> const&)>)> const& func) {
-                static_assert(std::is_base_of<Stream::Event, E>::value, "The E must be a Stream::Event derrived entity");
-                _map->map<E>(func);
-                return Map(_map);
+            template <typename T>
+            void on(std::function<std::shared_ptr<Promise::Publisher::Event> const(std::shared_ptr<T> const&)> const& mapper) {
+                _impl->add([mapper](auto event) {
+                    auto mapped = std::dynamic_pointer_cast<T>(event);
+                    return mapped ? mapper(mapped) : nullptr;
+                });
             }
 
         private:
-            std::shared_ptr<Concrete::Map> const _map;
+            std::shared_ptr<Publisher> const _publisher;
+            std::shared_ptr<Impl> const _impl;
+
         };
     }
 }

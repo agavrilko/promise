@@ -1,80 +1,45 @@
 #pragma once
 
-#include <vector>
 #include <memory>
-#include "../stream.h"
+#include "../publisher.h"
 
 namespace Promise {
     namespace Concrete {
-        class Map : public Stream {
-        private:
-            class Impl {
+        class Map : public Publisher {
+        public:
+            class Converter {
             public:
-                typedef std::function<void(std::shared_ptr<Stream::Event> const&, std::function<void(std::shared_ptr<Stream::Event> const&)>)> Mapper;
-
-                Impl() :
-                    _mappers() {}
-
-                void add(Mapper const& mapper) {
-                    _mappers.push_back(mapper);
-                }
-
-                void map(std::shared_ptr<Stream::Subscriber> const& subscriber, std::shared_ptr<Stream::Event> const& event) const {
-                    for (auto& mapper : _mappers) {
-                        mapper(event, std::bind(&Stream::Subscriber::received, subscriber, std::placeholders::_1));
-                    }
-                }
-
-            private:
-                std::vector<Mapper> _mappers;
+                virtual std::shared_ptr<Event> const map(std::shared_ptr<Event> const&) = 0;
             };
 
-            class Mapper : public Stream::Subscriber {
+        private:
+            class Mapper : public Publisher::Subscriber {
             public:
-                Mapper(std::shared_ptr<Impl> const& impl, std::shared_ptr<Stream::Subscriber> const& subscriber) :
-                    _impl(impl),
-                    _subscriber(subscriber) {}
+                Mapper(std::shared_ptr<Converter> const& converter, std::shared_ptr<Subscriber> const& subscriber) :
+                _converter(converter),
+                _subscriber(subscriber) {}
 
-                void completed() override {
-                    _subscriber->completed();
-                }
-
-                void failed(std::shared_ptr<Error> const& error) override {
-                    _subscriber->failed(error);
-                }
-
-                void received(std::shared_ptr<Event> const& event) override {
-                    _impl->map(_subscriber, event);
+                void sink(std::shared_ptr<Event> const& event) override {
+                    _subscriber->sink(_converter->map(event));
                 }
 
             private:
-                std::shared_ptr<Impl> const _impl;
-                std::shared_ptr<Stream::Subscriber> const _subscriber;
-
+                std::shared_ptr<Converter> const _converter;
+                std::shared_ptr<Subscriber> const _subscriber;
             };
 
         public:
-            Map(std::shared_ptr<Stream> const& stream) :
-                _stream(stream),
-                _impl(std::make_shared<Impl>()) {}
+            Map(std::shared_ptr<Publisher> const& publisher, std::shared_ptr<Converter> const& converter) :
+            _publisher(publisher),
+            _converter(converter) {}
 
             std::shared_ptr<Cancellable> const listen(std::shared_ptr<Subscriber> const& subscriber) override {
-                return _stream->listen(std::make_shared<Mapper>(_impl, subscriber));
-            }
-
-            template <class E>
-            void map(std::function<void(std::shared_ptr<E> const&, std::function<void(std::shared_ptr<Stream::Event> const&)>)> const& func) {
-                _impl->add([func](auto event, auto receive) {
-                    auto const casted = std::dynamic_pointer_cast<E>(event);
-                    if (casted) {
-                        func(casted, receive);
-                    }
-                });
+                return _publisher->listen(std::make_shared<Mapper>(_converter, subscriber));
             }
 
         private:
-            std::shared_ptr<Stream> const _stream;
-            std::shared_ptr<Impl> const _impl;
+            std::shared_ptr<Publisher> const _publisher;
+            std::shared_ptr<Converter> const _converter;
 
         };
     }

@@ -1,44 +1,61 @@
 #pragma once
 
+#include <functional>
 #include <memory>
-#include "../internal/closure.h"
-#include "../stream.h"
+#include "../internal/switch.h"
+#include "../publisher.h"
 
 namespace Promise {
     namespace Pipeline {
         struct Listen {
-            static Listen to(std::shared_ptr<Stream> const& stream) {
-                return Listen(stream, std::make_shared<Internal::Closure>());
-            }
+        private:
+            struct Impl : public Publisher::Subscriber {
+                Impl() :
+                _funcs() {}
 
-            Listen onComplete(std::function<void(void)> const& handler) {
-                _closure->onComplete(handler);
-                return Listen(_stream, _closure);
-            }
+                void sink(std::shared_ptr<Publisher::Event> const& event) override {
+                    for (auto& func : _funcs) {
+                        func(event);
+                    }
+                }
 
-            template <typename E>
-            Listen onFail(std::function<void(std::shared_ptr<E> const&)> const& handler) {
-                _closure->onFail<E>(handler);
-                return Listen(_stream, _closure);
-            }
+                void add(std::function<void(std::shared_ptr<Publisher::Event> const&)> const& func) {
+                    _funcs.push_back(func);
+                }
+
+            private:
+                std::vector<std::function<void(std::shared_ptr<Publisher::Event> const&)>> _funcs;
+            };
+
+        public:
+            Listen(std::shared_ptr<Publisher> const& publisher) :
+            Listen(publisher, std::make_shared<Impl>()) {}
 
             template <typename T>
-            Listen onReceive(std::function<void(std::shared_ptr<T> const&)> const& handler) {
-                _closure->onReceive<T>(handler);
-                return Listen(_stream, _closure);
+            Listen on(std::function<void(std::shared_ptr<T> const&)> const& func) {
+                _impl->add([func](auto event) {
+                    Internal::Switch(event)
+                        .on<T>(func);
+                });
+                return Listen(_publisher, _impl);
             }
 
             std::shared_ptr<Cancellable> const commit() {
-                return _stream->listen(_closure);
+                return _publisher->listen(_impl);
+            }
+
+            void commit(std::shared_ptr<Concrete::Bag> const& bag) {
+                bag->add(commit());
             }
 
         private:
-            std::shared_ptr<Stream> const _stream;
-            std::shared_ptr<Internal::Closure> const _closure;
+            std::shared_ptr<Publisher> const _publisher;
+            std::shared_ptr<Impl> const _impl;
 
-            Listen(std::shared_ptr<Stream> const& stream, std::shared_ptr<Internal::Closure> const& closure) :
-                _stream(stream),
-                _closure(closure) {}
+            Listen(std::shared_ptr<Publisher> const& publisher, std::shared_ptr<Impl> const& impl) :
+            _publisher(publisher),
+            _impl(impl) {}
+
         };
     }
 }
