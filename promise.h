@@ -15,6 +15,7 @@
 #include "pipeline/link.h"
 #include "pipeline/listen.h"
 #include "pipeline/map.h"
+#include "pipeline/queue.h"
 #include "pipeline/subscription_observer.h"
 #include "publisher.h"
 #include "queue.h"

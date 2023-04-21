@@ -28,6 +28,7 @@ set(PROMISE_HEADER
     pipeline/link.h
     pipeline/listen.h
     pipeline/map.h
+    pipeline/queue.h
     pipeline/subscription_observer.h
     promise.h
     publisher.h

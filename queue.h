@@ -52,7 +52,6 @@ namespace Promise {
         void _execute() {
             if (_publishers.size()) {
                 auto const publisher = _publishers.front();
-                _publishers.pop_front();
                 _bag = Pipeline::Just(publisher)
                     .listen()
                     .on<Publisher::Done>(std::bind(&Queue::_pop, shared_from_this(), publisher))
